@@ -15,22 +15,31 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - name: Create Android folder
+      - name: Backup our code
         run: |
-          flutter create /tmp/hg --project-name humansgram --platforms android --org com.humansgram.app
-          rm -rf android
-          cp -r /tmp/hg/android ./
-      - name: Disable Android Lint
+          mkdir -p /tmp/backup
+          cp lib/main.dart /tmp/backup/main.dart || true
+          cp -r assets /tmp/backup/ || true
+          ls -la /tmp/backup/
+      - name: Create fresh Flutter project
         run: |
-          echo "android { lintOptions { abortOnError false } lint { abortOnError false } }" >> android/app/build.gradle || true
-      - name: Install deps
+          rm -rf android ios web linux macos windows
+          flutter create . --project-name humansgram --org com.humansgram.app --platforms android
+      - name: Restore our Humansgram code
         run: |
-          flutter pub get
+          cp /tmp/backup/main.dart lib/main.dart
+          rm -rf assets
+          cp -r /tmp/backup/assets assets || true
+          ls lib/ assets/
+      - name: Add dependencies
+        run: |
           flutter pub add supabase_flutter
-      - name: Build APK (no lint)
-        run: flutter build apk --release --no-tree-shake-icons -v
+          flutter pub get
+      - name: Build APK
+        run: flutter build apk --release
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: humansgram-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          
